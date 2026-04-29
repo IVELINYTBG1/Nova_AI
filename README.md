@@ -1,5 +1,3 @@
-<img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/d5b0d5ed-2428-4862-b9d0-4a8c406d447a" />
-<img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/b187e5fb-96b0-41a4-948c-ffc32b74a7c9" />
 <div align="center">
 
   # NOVA
