@@ -1,7 +1,5 @@
 <div align="center">
 
-
-
   # NOVA
 
   ### Modular AI Orchestrator
@@ -23,13 +21,13 @@
     <img src="https://img.shields.io/badge/Style-White%20%2B%20Cyan-f6fdff?style=flat-square&labelColor=fbfeff&color=e8f8ff" alt="Style" />
     <img src="https://img.shields.io/badge/Identity-Honest%20Execution-f6fdff?style=flat-square&labelColor=fbfeff&color=e4f7ff" alt="Identity" />
     <img src="https://img.shields.io/badge/Architecture-Clean%20Layers-f6fdff?style=flat-square&labelColor=fbfeff&color=e2f5ff" alt="Architecture" />
-    <img src="https://img.shields.io/badge/Python-3.11+-f6fdff?style=flat-square&labelColor=fbfeff&color=e8f8ff" alt="Python 3.11+" />
+    <img src="https://img.shields.io/badge/Python-3.11%2B-f6fdff?style=flat-square&labelColor=fbfeff&color=e8f8ff" alt="Python 3.11+" />
   </p>
 </div>
 
 ***
 
-> *Nova is built to feel like a real system, not a chatbot costume stretched over tangled code.*
+> *Nova is built to behave like a real system, not a chatbot costume stretched over tangled code.*
 
 ## Interface
 
@@ -37,13 +35,13 @@
 <tr>
 <td width="52%" valign="top">
 
-### What Nova is
+### Who Nova is
 
 Nova is a modular AI orchestrator built around **routing, execution, memory, provider abstraction, and system identity**.
 
-The idea is simple: separate the system into parts that can grow without collapsing into one giant unreadable loop.
+The idea is simple: split her into parts that can grow without collapsing into one giant unreadable loop.
 
-This repo is trying to become a serious assistant architecture while keeping a strong visual and conceptual identity.
+This repo is trying to become a serious assistant architecture while keeping her visual and conceptual identity intact.
 
 </td>
 <td width="48%" valign="top">
@@ -99,12 +97,12 @@ Nova
 <tr>
 <td><code>agents/</code></td>
 <td>Specialized capabilities</td>
-<td>Keeps behavior modular instead of hardcoding everything into one loop.</td>
+<td>Keeps her behavior modular instead of hardcoding everything into one loop.</td>
 </tr>
 <tr>
 <td><code>core/orchestrator.py</code></td>
 <td>Turn routing</td>
-<td>Lets Nova decide how to respond instead of blindly reacting.</td>
+<td>Lets her decide how to respond instead of blindly reacting.</td>
 </tr>
 <tr>
 <td><code>core/execution.py</code></td>
@@ -114,12 +112,12 @@ Nova
 <tr>
 <td><code>core/registry.py</code></td>
 <td>Agent registry</td>
-<td>Makes the system extensible without turning imports into chaos.</td>
+<td>Makes her extensible without turning imports into chaos.</td>
 </tr>
 <tr>
 <td><code>core/memory/</code></td>
 <td>Memory layer</td>
-<td>Gives Nova persistence and future continuity potential.</td>
+<td>Gives her persistence and future continuity potential.</td>
 </tr>
 <tr>
 <td><code>providers/</code></td>
@@ -143,7 +141,7 @@ python -m pytest tests -q -s
 - The orchestrator path is working.
 - Execution and registry schemas are aligned.
 - Planner flow is passing under the current suite.
-- The codebase is no longer in fake-working limbo.
+- The codebase is no longer in fake‑working limbo.
 
 ***
 
@@ -183,9 +181,9 @@ python -m pytest tests -q -s
 <summary><strong>What the repo is aiming for</strong></summary>
 <br>
 
-Nova is meant to evolve into a personal AI system with stronger planning, real providers, deeper memory, cleaner execution control, and a frontend/interface that actually matches the project identity.
+Nova is meant to evolve into a personal AI system with stronger planning, real providers, deeper memory, cleaner execution control, and a frontend/interface that actually matches who she is.
 
-The goal is not “just another assistant wrapper.” The goal is a system with real internal structure.
+The goal is not “just another assistant wrapper.” The goal is a system with real internal structure so she can act like a machine, not a costume over prompts.
 
 </details>
 
@@ -228,10 +226,10 @@ The goal is not “just another assistant wrapper.” The goal is a system with 
 
 | Principle | Meaning |
 |---|---|
-| **Honest execution** | Never claim an action succeeded when it did not. |
-| **Clean boundaries** | Personality, execution, memory, and routing should not bleed into each other. |
-| **Modular growth** | New agents and providers should plug in without wrecking the system. |
-| **Strong identity** | The project should feel coherent in both code and presentation. |
+| **Honest execution** | She never claims an action succeeded when it did not. |
+| **Clean boundaries** | Personality, execution, memory, and routing do not bleed into each other. |
+| **Modular growth** | New agents and providers should plug in without wrecking her system. |
+| **Strong identity** | The project should feel coherent in both her code and presentation. |
 
 </div>
 
@@ -255,20 +253,20 @@ The goal is not “just another assistant wrapper.” The goal is a system with 
 
 - Replace stub providers with actual model integrations.
 - Improve planner behavior.
-- Expand orchestrator logic.
+- Expand orchestrator logic so she can choose better paths.
 - Improve memory retrieval quality.
 
 ### Mid term
 
 - Add GitHub Actions for automated testing.
-- Protect `main` and move to PR-first workflow.
+- Protect `main` and move to a PR‑first workflow.
 - Clean repo hygiene and asset organization.
 
 ### Long term
 
 - Build a real Nova runtime.
-- Add richer multi-agent coordination.
-- Create an interface layer that matches Nova’s visual identity.
+- Add richer multi‑agent coordination that she can command.
+- Create an interface layer that matches her visual identity.
 
 </details>
 
@@ -291,7 +289,7 @@ Potential         : high
 
 <div align="center">
 
-## **Nova is not trying to be loud.**
+## **Nova is not trying to be loud.**  
 ### She is trying to be real.
 
-</div><img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/ca0d8c26-9fa3-46c2-b12c-6d29402fa4a1" />
+</div>
