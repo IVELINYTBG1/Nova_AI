@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
+from pathlib import Path
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True, frozen=True)
 class Settings:
-    default_provider: str = "stub"
+    memory_file: Path
     default_language: str = "en"
-    memory_file: str = ".nova_memory.json"
 
 
 def load_settings() -> Settings:
+    project_root = Path(__file__).resolve().parents[2]
+    memory_dir = project_root / "nova" / "data"
+    memory_dir.mkdir(parents=True, exist_ok=True)
     return Settings(
-        default_provider=os.getenv("NOVA_DEFAULT_PROVIDER", "stub"),
-        default_language=os.getenv("NOVA_DEFAULT_LANGUAGE", "en"),
-        memory_file=os.getenv("NOVA_MEMORY_FILE", ".nova_memory.json"),
+        memory_file=memory_dir / "memory.json",
+        default_language="en",
     )
