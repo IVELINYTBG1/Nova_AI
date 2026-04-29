@@ -324,6 +324,4 @@ Potential         : high
 ## **Nova is not trying to be loud.**  
 ### She is trying to be real.
 
-<img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/a1f41a2c-04bf-45f1-8078-525358ed149d" />
-
 </div>
