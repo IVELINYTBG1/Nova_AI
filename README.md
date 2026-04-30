@@ -269,7 +269,8 @@ The goal is not “just another assistant wrapper.” The goal is a system with 
 ## Roadmap
 
 ```text
-[Phase 1] Stabilize core architecture             ██████████
+[Phase 1] Stabilize core architecture            <img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/b0b525de-268d-4023-ab11-9dc27fc14728" />
+██████████
 [Phase 2] Replace provider stubs                 ███████░░░
 [Phase 3] Deepen memory + orchestration          ███░░░░░░░
 [Phase 4] Add CI / branch protection             ██░░░░░░░░
@@ -323,5 +324,7 @@ Potential         : high
 
 ## **Nova is not trying to be loud.**  
 ### She is trying to be real.
+
+<img width="1376" height="768" alt="generated-image" src="https://github.com/user-attachments/assets/666de8e4-2113-4236-96db-ae535f439be4" />
 
 </div>
