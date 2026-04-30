@@ -27,18 +27,32 @@ class GroqLlamaScoutVisionProvider:
         if not cleaned_prompt:
             raise ProviderExecutionError("Groq vision received an empty prompt.")
 
-        image_b64 = base64.b64encode(image_bytes).decode("ascii")
-        image_url = f"data:image/jpeg;base64,{image_b64}"
+        parts = image_bytes.split(b"\n--candidate-boundary--\n", maxsplit=1)
+        content = [{"type": "text", "text": cleaned_prompt}]
+
+        if len(parts) == 2:
+            reference_b64 = base64.b64encode(parts[0]).decode("ascii")
+            candidate_b64 = base64.b64encode(parts[1]).decode("ascii")
+            content.extend(
+                [
+                    {"type": "text", "text": "Reference image:"},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{reference_b64}"}},
+                    {"type": "text", "text": "Candidate image:"},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{candidate_b64}"}},
+                ]
+            )
+        else:
+            image_b64 = base64.b64encode(image_bytes).decode("ascii")
+            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}})
+
         payload = {
             "model": self.model,
             "temperature": 0.0,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {
                     "role": "user",
-                    "content": [
-                        {"type": "text", "text": cleaned_prompt},
-                        {"type": "image_url", "image_url": {"url": image_url}},
-                    ],
+                    "content": content,
                 }
             ],
         }
@@ -70,8 +84,8 @@ class GroqLlamaScoutVisionProvider:
         message = first_choice.get("message")
         if not isinstance(message, dict):
             raise ProviderExecutionError("Groq vision response missing message object.")
-        content = message.get("content")
-        if not isinstance(content, str) or not content.strip():
+        content_value = message.get("content")
+        if not isinstance(content_value, str) or not content_value.strip():
             raise ProviderExecutionError("Groq vision response contained no message content.")
 
-        return content.strip()
+        return content_value.strip()

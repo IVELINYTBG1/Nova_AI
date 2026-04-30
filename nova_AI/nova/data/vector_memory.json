@@ -1,0 +1,45 @@
+{
+  "turns": [
+    {
+      "role": "user",
+      "content": "are you there Nova",
+      "timestamp": "2026-04-30T17:13:29.448249+00:00"
+    },
+    {
+      "role": "nova",
+      "content": "Yes, I'm here.",
+      "timestamp": "2026-04-30T17:13:29.449321+00:00"
+    },
+    {
+      "role": "user",
+      "content": "so how are you feeling",
+      "timestamp": "2026-04-30T17:13:48.862452+00:00"
+    },
+    {
+      "role": "nova",
+      "content": "I'm steady and attentive, ready for whatever you need.",
+      "timestamp": "2026-04-30T17:13:48.863444+00:00"
+    },
+    {
+      "role": "user",
+      "content": "do you know who i am",
+      "timestamp": "2026-04-30T17:14:12.093777+00:00"
+    },
+    {
+      "role": "nova",
+      "content": "Yes. I recognize you from the enrolled reference image. Confidence: 0.90. Reason: The candidate image appears to be the same person as the reference image, with a high degree of similarity in facial features, expression, and surroundings.",
+      "timestamp": "2026-04-30T17:14:12.095775+00:00"
+    },
+    {
+      "role": "user",
+      "content": "that face is me i'm your Boss and creator glad to meet you",
+      "timestamp": "2026-04-30T17:15:14.815640+00:00"
+    },
+    {
+      "role": "nova",
+      "content": "Acknowledged, Boss. What would you like to work on?",
+      "timestamp": "2026-04-30T17:15:14.816696+00:00"
+    }
+  ],
+  "facts": []
+}

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Awaitable, Callable
 
 from nova.providers.base_provider import ProviderExecutionError
+
+logger = logging.getLogger(__name__)
 
 
 class IdentityVerificationError(RuntimeError):
@@ -15,6 +18,7 @@ class IdentityVerificationError(RuntimeError):
 
 class IdentityDecisionSource(str, Enum):
     MODEL = "model"
+    SKIPPED = "skipped"
 
 
 @dataclass(slots=True, frozen=True)
@@ -62,31 +66,55 @@ class IdentityGate:
 
         return self._parse_decision(raw_response)
 
+    async def verify_candidate_from_camera(self, camera_service) -> IdentityDecision:
+        frame = camera_service.capture_frame_bytes()
+        if not frame:
+            return IdentityDecision(
+                same_person=False,
+                confidence=None,
+                spoof_suspected=False,
+                reason="Camera feed is not available for verification.",
+                source=IdentityDecisionSource.SKIPPED,
+            )
+        return await self.verify_candidate(frame)
+
+    def _coerce_bool(self, value: object, field_name: str) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered == "true":
+                return True
+            if lowered == "false":
+                return False
+        raise IdentityVerificationError(f"Identity gate response field '{field_name}' must be a boolean.")
+
     def _parse_decision(self, raw_response: str) -> IdentityDecision:
         try:
             payload = json.loads(raw_response)
         except json.JSONDecodeError as exc:
+            logger.warning("Malformed identity provider output: %s", raw_response)
             raise IdentityVerificationError(f"Identity gate expected strict JSON but received invalid output: {exc}") from exc
 
         if not isinstance(payload, dict):
+            logger.warning("Identity provider returned non-object payload: %r", payload)
             raise IdentityVerificationError("Identity gate expected a JSON object.")
 
-        same_person = payload.get("same_person")
-        spoof_suspected = payload.get("spoof_suspected")
+        same_person = self._coerce_bool(payload.get("same_person"), "same_person")
+        spoof_suspected = self._coerce_bool(payload.get("spoof_suspected"), "spoof_suspected")
         reason = payload.get("reason")
         confidence = payload.get("confidence")
 
-        if not isinstance(same_person, bool):
-            raise IdentityVerificationError("Identity gate response field 'same_person' must be a boolean.")
-        if not isinstance(spoof_suspected, bool):
-            raise IdentityVerificationError("Identity gate response field 'spoof_suspected' must be a boolean.")
         if not isinstance(reason, str) or not reason.strip():
+            logger.warning("Identity provider returned invalid reason field: %r", reason)
             raise IdentityVerificationError("Identity gate response field 'reason' must be a non-empty string.")
         if confidence is not None:
             if not isinstance(confidence, (int, float)):
+                logger.warning("Identity provider returned invalid confidence field: %r", confidence)
                 raise IdentityVerificationError("Identity gate response field 'confidence' must be numeric or null.")
             confidence = float(confidence)
             if confidence < 0.0 or confidence > 1.0:
+                logger.warning("Identity provider returned out-of-range confidence: %r", confidence)
                 raise IdentityVerificationError("Identity gate confidence must be between 0 and 1.")
 
         return IdentityDecision(
