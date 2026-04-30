@@ -22,7 +22,6 @@ from nova.core.queue import TaskQueue
 from nova.core.registry import AgentRegistry
 from nova.core.result_types import InputTurn
 from nova.core.tts_gate import TtsExhaustionGuard, TtsGate, TtsInterruptHandler
-from nova.providers.anthropic_provider import AnthropicProvider
 from nova.providers.base_provider import ProviderConfigError
 from nova.providers.fish_speech_api_provider import FishSpeechApiProvider
 from nova.providers.groq_gpt_turbo_stt_provider import GroqGptTurboSttProvider
@@ -71,7 +70,7 @@ class NovaApp:
     def handle_text(self, text: str) -> str:
         cleaned = text.strip()
         if not cleaned:
-            return "Say something real and I’ll respond."
+            return "Say something real and I'll respond."
 
         lowered = cleaned.lower()
         if self._is_recognition_intent(lowered):
@@ -82,12 +81,12 @@ class NovaApp:
 
         if "can you see me" in lowered or "do you see me" in lowered:
             if not self.camera_service.is_available():
-                return "The camera is not available on this runtime. Vision is loaded, but there’s no live camera feed coming through."
+                return "The camera is not available on this runtime. Vision is loaded, but there's no live camera feed coming through."
             frame = self.camera_service.capture_frame_bytes()
             if frame:
                 self.last_live_frame_received = True
                 return "Yes. I can take a live frame from the local camera right now."
-            return "Vision is loaded, but I didn’t get a live frame from the camera yet."
+            return "Vision is loaded, but I didn't get a live frame from the camera yet."
 
         remember_prefix = "remember that "
         if lowered.startswith(remember_prefix):
@@ -114,7 +113,7 @@ class NovaApp:
         response = self.orchestrator.handle_turn(turn)
         self._remember_turn(cleaned, response.text)
         self._update_nova_state(cleaned)
-        return response.text if response.text else "I couldn’t produce a coherent reply for that one."
+        return response.text if response.text else "I couldn't produce a coherent reply for that one."
 
     def describe_camera_status(self) -> str:
         return "Camera: ready" if self.camera_service.is_available() else "Camera: unavailable"
@@ -152,7 +151,7 @@ class NovaApp:
             return "Tell me what you want me to remember."
 
         self.vector_memory.store_fact(fact)
-        return "Got it. I’ll remember that."
+        return "Got it. I'll remember that."
 
     def _is_recognition_intent(self, lowered: str) -> bool:
         normalized = " ".join(lowered.split())
@@ -189,27 +188,27 @@ class NovaApp:
                 remembered_bits.append(content)
 
         if not remembered_bits:
-            return "I don’t have anything relevant stored yet."
+            return "I don't have anything relevant stored yet."
 
         if len(remembered_bits) == 1:
             return f"I remember that {remembered_bits[0]}"
 
         joined = "; ".join(remembered_bits[:3])
-        return f"Here’s what stands out to me: {joined}"
+        return f"Here's what stands out to me: {joined}"
 
     def _answer_identity_question(self) -> str:
         if self.camera_gate is None or self.identity_gate is None:
             return "Identity verification is not available in this runtime."
         if not self.camera_service.is_available():
-            return "The camera is unavailable, so I can’t verify your identity right now."
+            return "The camera is unavailable, so I can't verify your identity right now."
         if not self.camera_gate.is_enrolled():
-            return "I don’t have an enrolled reference image yet, so I can’t verify whether this is you."
+            return "I don't have an enrolled reference image yet, so I can't verify whether this is you."
         try:
             frame = self.camera_service.capture_frame_bytes()
         except Exception as exc:
-            return f"The camera is unavailable, so I can’t verify your identity right now: {exc}"
+            return f"The camera is unavailable, so I can't verify your identity right now: {exc}"
         if not frame:
-            return "I couldn’t get a live camera frame, so verification could not be completed."
+            return "I couldn't get a live camera frame, so verification could not be completed."
         try:
             decision = self._run_identity_verification(frame)
         except IdentityVerificationError as exc:
@@ -249,12 +248,7 @@ def build_nova(settings: Settings) -> NovaApp:
     provider_registry = ProviderRegistry()
 
     try:
-        provider_registry.register_primary_llm(AnthropicProvider())
-    except ProviderConfigError:
-        pass
-
-    try:
-        provider_registry.register_fallback_llm(GroqOss120BProvider())
+        provider_registry.register_primary_llm(GroqOss120BProvider())
     except ProviderConfigError:
         pass
 
