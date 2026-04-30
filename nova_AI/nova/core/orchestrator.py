@@ -21,29 +21,43 @@ class Orchestrator:
         honesty: HonestyValidator,
         polisher: LanguagePolisher,
         execution_service: ExecutionService,
+        vector_memory: object | None = None,
+        nova_state: object | None = None,
     ) -> None:
         self._memory = memory
         self._model_router = model_router
         self._honesty = honesty
         self._polisher = polisher
         self._execution = execution_service
+        self._vector_memory = vector_memory
+        self._nova_state = nova_state
 
     def handle_turn(self, turn: InputTurn) -> ResponseTurn:
         now = datetime.now().astimezone()
         time_context = get_current_time_context(now)
         memories = self._memory.search(turn.text, limit=3)
         context = self._build_memory_context(memories, now)
+        vector_context = self._build_vector_memory_context(turn.text)
+        merged_context = self._merge_contexts(context, vector_context)
         lowered = turn.text.lower()
+
+        state_context = ""
+        if self._nova_state is not None and hasattr(self._nova_state, "to_context_string"):
+            state_context = str(self._nova_state.to_context_string()).strip()
+
+        system_prompt = build_system_prompt(time_context)
+        if state_context:
+            system_prompt = f"{system_prompt}\n\nInternal state:\n{state_context}"
 
         if any(kw in lowered for kw in ["plan", "steps", "how should i approach"]):
             planning_prompt = (
-                f"{build_system_prompt(time_context)}\n"
+                f"{system_prompt}\n"
                 "You are a planning specialist. Given a goal and optional context, "
                 "return a short numbered list of concrete steps."
             )
             request = ExecutionRequest(
                 agent_name="planner",
-                input_data={"goal": turn.text, "context": context, "planning_prompt": planning_prompt},
+                input_data={"goal": turn.text, "context": merged_context, "planning_prompt": planning_prompt},
                 reason="user-goal-planning",
                 requested_by=turn.user_id,
             )
@@ -74,7 +88,7 @@ class Orchestrator:
                 undo_state=None,
                 memory_provenance=MemoryProvenance(
                     memory_ids=[item.id for item in memories],
-                    sources=[item.source for item in memories],
+                    sources=[item.source for item in memories] + self._vector_memory_sources(vector_context),
                     latest_user_override=True,
                 ),
                 executed=True,
@@ -87,9 +101,9 @@ class Orchestrator:
 
         model_request = ModelRequest(
             task_type="chat",
-            system_prompt=build_system_prompt(time_context),
+            system_prompt=system_prompt,
             user_text=turn.text,
-            context=context,
+            context=merged_context,
         )
         model_response = self._model_router.generate(model_request)
         draft = ResponseTurn(
@@ -105,7 +119,7 @@ class Orchestrator:
             undo_state=None,
             memory_provenance=MemoryProvenance(
                 memory_ids=[item.id for item in memories],
-                sources=[item.source for item in memories],
+                sources=[item.source for item in memories] + self._vector_memory_sources(vector_context),
                 latest_user_override=True,
             ),
             executed=False,
@@ -124,6 +138,52 @@ class Orchestrator:
             elapsed = describe_elapsed_time(reference_time, now)
             parts.append(f"{item.content} (stored {elapsed})")
         return " | ".join(parts)
+
+    def _build_vector_memory_context(self, query: str) -> str:
+        if self._vector_memory is None:
+            return ""
+
+        parts: list[str] = []
+
+        if hasattr(self._vector_memory, "search_facts"):
+            try:
+                facts = self._vector_memory.search_facts(query, n=3)
+            except Exception:
+                facts = []
+            for item in facts:
+                content = str(item.get("content", "")).strip()
+                if content:
+                    parts.append(f"Known fact: {content}")
+
+        if hasattr(self._vector_memory, "recall"):
+            try:
+                turns = self._vector_memory.recall(query, n=3)
+            except Exception:
+                turns = []
+            for item in turns:
+                content = str(item.get("content", "")).strip()
+                role = str(item.get("role", "")).strip()
+                if content:
+                    if role:
+                        parts.append(f"Prior {role} turn: {content}")
+                    else:
+                        parts.append(f"Prior turn: {content}")
+
+        return " | ".join(parts)
+
+    def _merge_contexts(self, base_context: str, vector_context: str) -> str:
+        if base_context and vector_context:
+            return f"{base_context} | {vector_context}"
+        if base_context:
+            return base_context
+        if vector_context:
+            return vector_context
+        return ""
+
+    def _vector_memory_sources(self, vector_context: str) -> list[str]:
+        if not vector_context:
+            return []
+        return ["vector_memory"]
 
     def _maybe_prepend_time_acknowledgment(self, response: ResponseTurn, now: datetime) -> ResponseTurn:
         phrase = maybe_time_acknowledgment(now)

@@ -26,6 +26,8 @@ class ModelRouter:
     ) -> None:
         if registry is not None:
             self._registry = registry
+            # Runtime Anthropic availability flag, updated on success/failure.
+            self._anthropic_available: bool | None = None
             return
 
         if not providers or default_provider is None:
@@ -38,6 +40,15 @@ class ModelRouter:
         built_registry.register_primary_llm(primary)
         built_registry.register_fallback_llm(primary)
         self._registry = built_registry
+        self._anthropic_available = None
+
+    @property
+    def anthropic_available(self) -> bool | None:
+        """Best-effort view of primary Anthropic availability.
+
+        None = unknown, True = recently succeeded, False = recently failed.
+        """
+        return self._anthropic_available
 
     async def route_chat(
         self,
@@ -52,14 +63,20 @@ class ModelRouter:
             fallback = self._registry.get_fallback_llm()
             return await self._invoke_chat(fallback, messages=messages, meta=task.meta)
 
+        # Try primary, track Anthropic availability state if that is the primary.
         try:
             primary = self._registry.get_primary_llm()
             result = await self._invoke_chat(primary, messages=messages, meta=task.meta)
             if result.success:
+                if getattr(primary, "name", "") == "anthropic":
+                    self._anthropic_available = True
                 return result
         except (LookupError, ProviderConfigError, ProviderExecutionError):
-            pass
+            if getattr(self._registry.get_primary_llm(), "name", "") == "anthropic":
+                # Primary Anthropic failed; mark as unavailable.
+                self._anthropic_available = False
 
+        # Primary missing or failed: fall back.
         fallback = self._registry.get_fallback_llm()
         return await self._invoke_chat(fallback, messages=messages, meta=task.meta)
 
@@ -81,9 +98,12 @@ class ModelRouter:
             primary = self._registry.get_primary_llm()
             result = await self._invoke_generate(primary, prompt=prompt, system=system, meta=task.meta)
             if result.success:
+                if getattr(primary, "name", "") == "anthropic":
+                    self._anthropic_available = True
                 return result
         except (LookupError, ProviderConfigError, ProviderExecutionError):
-            pass
+            if getattr(self._registry.get_primary_llm(), "name", "") == "anthropic":
+                self._anthropic_available = False
 
         fallback = self._registry.get_fallback_llm()
         return await self._invoke_generate(fallback, prompt=prompt, system=system, meta=task.meta)
