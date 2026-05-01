@@ -12,6 +12,8 @@ from nova.core.personality.system_prompt import build_system_prompt
 from nova.core.result_types import InputTurn, MemoryItem, ModelRequest, ResponseTurn
 from nova.core.time_context import describe_elapsed_time, get_current_time_context, maybe_time_acknowledgment
 
+_MAX_HISTORY_PAIRS = 10   # 10 user+assistant pairs = 20 messages max
+
 
 class Orchestrator:
     def __init__(
@@ -31,6 +33,7 @@ class Orchestrator:
         self._execution = execution_service
         self._vector_memory = vector_memory
         self._nova_state = nova_state
+        self._history: list[dict[str, str]] = []   # ← rolling session buffer
 
     def handle_turn(self, turn: InputTurn) -> ResponseTurn:
         now = datetime.now().astimezone()
@@ -48,6 +51,14 @@ class Orchestrator:
         system_prompt = build_system_prompt(time_context)
         if state_context:
             system_prompt = f"{system_prompt}\n\nInternal state:\n{state_context}"
+
+        # Snapshot history BEFORE appending current turn —
+        # model_router receives only prior turns, then appends user_text itself.
+        prior_history = list(self._history)
+
+        # Record the user turn now so it exists for the next round.
+        self._history.append({"role": "user", "content": turn.text})
+        self._trim_history()
 
         if any(kw in lowered for kw in ["plan", "steps", "how should i approach"]):
             planning_prompt = (
@@ -96,6 +107,9 @@ class Orchestrator:
             )
             validated = self._honesty.validate(draft, facts)
             final_response = self._polisher.polish(validated)
+            if final_response.success and final_response.text:
+                self._history.append({"role": "assistant", "content": final_response.text})
+                self._trim_history()
             self._store_memory_if_relevant(turn)
             return final_response
 
@@ -104,6 +118,7 @@ class Orchestrator:
             system_prompt=system_prompt,
             user_text=turn.text,
             context=merged_context,
+            history=prior_history,       # ← history now flows through
         )
         model_response = self._model_router.generate(model_request)
         draft = ResponseTurn(
@@ -128,8 +143,18 @@ class Orchestrator:
         validated = self._honesty.validate(draft, facts)
         final_response = self._polisher.polish(validated)
         final_response = self._maybe_prepend_time_acknowledgment(final_response, now)
+
+        if final_response.success and final_response.text:
+            self._history.append({"role": "assistant", "content": final_response.text})
+            self._trim_history()
+
         self._store_memory_if_relevant(turn)
         return final_response
+
+    def _trim_history(self) -> None:
+        max_messages = _MAX_HISTORY_PAIRS * 2
+        if len(self._history) > max_messages:
+            self._history = self._history[-max_messages:]
 
     def _build_memory_context(self, memories: list[MemoryItem], now: datetime) -> str:
         parts: list[str] = []
@@ -142,9 +167,7 @@ class Orchestrator:
     def _build_vector_memory_context(self, query: str) -> str:
         if self._vector_memory is None:
             return ""
-
         parts: list[str] = []
-
         if hasattr(self._vector_memory, "search_facts"):
             try:
                 facts = self._vector_memory.search_facts(query, n=3)
@@ -154,7 +177,6 @@ class Orchestrator:
                 content = str(item.get("content", "")).strip()
                 if content:
                     parts.append(f"Known fact: {content}")
-
         if hasattr(self._vector_memory, "recall"):
             try:
                 turns = self._vector_memory.recall(query, n=3)
@@ -164,28 +186,21 @@ class Orchestrator:
                 content = str(item.get("content", "")).strip()
                 role = str(item.get("role", "")).strip()
                 if content:
-                    if role:
-                        parts.append(f"Prior {role} turn: {content}")
-                    else:
-                        parts.append(f"Prior turn: {content}")
-
+                    parts.append(f"Prior {role} turn: {content}" if role else f"Prior turn: {content}")
         return " | ".join(parts)
 
     def _merge_contexts(self, base_context: str, vector_context: str) -> str:
         if base_context and vector_context:
             return f"{base_context} | {vector_context}"
-        if base_context:
-            return base_context
-        if vector_context:
-            return vector_context
-        return ""
+        return base_context or vector_context or ""
 
     def _vector_memory_sources(self, vector_context: str) -> list[str]:
-        if not vector_context:
-            return []
-        return ["vector_memory"]
+        return ["vector_memory"] if vector_context else []
 
     def _maybe_prepend_time_acknowledgment(self, response: ResponseTurn, now: datetime) -> ResponseTurn:
+        # Only on the very first reply of the session — not on every short message.
+        if len(self._history) > 2:
+            return response
         phrase = maybe_time_acknowledgment(now)
         if (
             phrase
@@ -205,15 +220,8 @@ class Orchestrator:
     def _store_memory_if_relevant(self, turn: InputTurn) -> None:
         lowered = turn.text.lower()
         triggers = [
-            "remember",
-            "my project",
-            "i am building",
-            "i'm building",
-            "i like",
-            "i prefer",
-            "don't forget",
-            "dont forget",
-            "my name is",
+            "remember", "my project", "i am building", "i'm building",
+            "i like", "i prefer", "don't forget", "dont forget", "my name is",
         ]
         if any(trigger in lowered for trigger in triggers):
             item = MemoryItem.create(

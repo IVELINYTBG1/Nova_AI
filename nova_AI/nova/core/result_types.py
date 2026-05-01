@@ -27,12 +27,15 @@ class AgentResult:
     undo_token: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass                          # ← removed frozen=True
 class ModelRequest:
     task_type: str
     system_prompt: str
     user_text: str
     context: str = ""
+    # Prior user/assistant turns. Does NOT include the current user_text —
+    # model_router appends that itself as the final message.
+    history: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

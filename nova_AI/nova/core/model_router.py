@@ -26,7 +26,6 @@ class ModelRouter:
     ) -> None:
         if registry is not None:
             self._registry = registry
-            # Runtime Anthropic availability flag, updated on success/failure.
             self._anthropic_available: bool | None = None
             return
 
@@ -63,7 +62,6 @@ class ModelRouter:
             fallback = self._registry.get_fallback_llm()
             return await self._invoke_chat(fallback, messages=messages, meta=task.meta)
 
-        # Try primary, track Anthropic availability state if that is the primary.
         try:
             primary = self._registry.get_primary_llm()
             result = await self._invoke_chat(primary, messages=messages, meta=task.meta)
@@ -73,10 +71,8 @@ class ModelRouter:
                 return result
         except (LookupError, ProviderConfigError, ProviderExecutionError):
             if getattr(self._registry.get_primary_llm(), "name", "") == "anthropic":
-                # Primary Anthropic failed; mark as unavailable.
                 self._anthropic_available = False
 
-        # Primary missing or failed: fall back.
         fallback = self._registry.get_fallback_llm()
         return await self._invoke_chat(fallback, messages=messages, meta=task.meta)
 
@@ -109,10 +105,40 @@ class ModelRouter:
         return await self._invoke_generate(fallback, prompt=prompt, system=system, meta=task.meta)
 
     def generate(self, request: ModelRequest) -> ModelResponse:
+        """
+        Build a full ChatMessage list from the request and route via route_chat()
+        so that conversation history is actually sent to the provider.
+
+        Message order:
+          1. system  — system_prompt (+ memory context injected as a system note)
+          2. history — prior user/assistant turns from request.history
+          3. user    — the current request.user_text (always last)
+        """
+        messages: list[ChatMessage] = []
+
+        # Build system message, injecting memory context if present.
+        system_content = request.system_prompt.strip()
+        if request.context and request.context.strip():
+            system_content = (
+                f"{system_content}\n\n"
+                f"RELEVANT CONTEXT (from memory):\n{request.context.strip()}"
+            )
+        if system_content:
+            messages.append({"role": "system", "content": system_content})
+
+        # Inject prior conversation turns.
+        for entry in request.history:
+            role = entry.get("role", "")
+            content = entry.get("content", "").strip()
+            if role in ("user", "assistant") and content:
+                messages.append({"role": role, "content": content})
+
+        # Current user message is always the final entry.
+        messages.append({"role": "user", "content": request.user_text})
+
         task = TaskDescription(task_type=request.task_type)
-        provider_result = asyncio.run(
-            self.route_generate(task=task, prompt=request.user_text, system=request.system_prompt)
-        )
+        provider_result = asyncio.run(self.route_chat(task=task, messages=messages))
+
         return ModelResponse(
             success=provider_result.success,
             text=provider_result.text,

@@ -22,7 +22,6 @@ from nova.core.queue import TaskQueue
 from nova.core.registry import AgentRegistry
 from nova.core.result_types import InputTurn
 from nova.core.tts_gate import TtsExhaustionGuard, TtsGate, TtsInterruptHandler
-from nova.providers.anthropic_provider import AnthropicProvider
 from nova.providers.base_provider import ProviderConfigError
 from nova.providers.fish_speech_api_provider import FishSpeechApiProvider
 from nova.providers.groq_gpt_turbo_stt_provider import GroqGptTurboSttProvider
@@ -249,12 +248,7 @@ def build_nova(settings: Settings) -> NovaApp:
     provider_registry = ProviderRegistry()
 
     try:
-        provider_registry.register_primary_llm(AnthropicProvider())
-    except ProviderConfigError:
-        pass
-
-    try:
-        provider_registry.register_fallback_llm(GroqOss120BProvider())
+        provider_registry.register_primary_llm(GroqOss120BProvider())
     except ProviderConfigError:
         pass
 

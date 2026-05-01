@@ -3,3 +3,6 @@
 *.png
 *.jpg
 *.jpeg
+
+*.json
+*.bin
